@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron bg-primary text-white rounded p-5 mb-4">
+	<h1 class="display-4">Welcome to Neurons</h1>
+	<p class="lead">A modern learning management system.</p>
+	{% if not user.is_authenticated %}
+		<a class="btn btn-light btn-lg" href="{% url 'login' %}">Get Started</a>
+	{% else %}
+		<a class="btn btn-light btn-lg me-2" href="{% url 'course_list' %}">View My Courses</a>
+		{% if user.is_superuser or user.role == 'admin' %}
+			<a class="btn btn-warning btn-lg" href="{% url 'user_management' %}">User Management</a>
+		{% endif %}
+	{% endif %}
+</div>
+{% endblock %}

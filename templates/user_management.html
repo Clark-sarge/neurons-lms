@@ -1,0 +1,444 @@
+<!-- templates/user_management.html -->
+{% extends 'base.html' %}
+
+{% block title %}User Management - Neurons{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users"></i> User Management</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+        <i class="fas fa-user-plus"></i> Add New User
+    </button>
+</div>
+
+<!-- Search and Filter Controls -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="searchUsers" placeholder="Search users...">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filterRole">
+                    <option value="">All Roles</option>
+                    <option value="student">Students</option>
+                    <option value="instructor">Instructors</option>
+                    <option value="admin">Administrators</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enroll Student in Course -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Enroll Student in Course</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3 align-items-end">
+            {% csrf_token %}
+            <div class="col-md-5">
+                <label for="enrollStudent" class="form-label">Student</label>
+                <select name="student_id" id="enrollStudent" class="form-select" required>
+                    <option value="">Select Student</option>
+                    {% for user in users %}
+                        {% if user.role == 'student' %}
+                            <option value="{{ user.id }}">{{ user.get_full_name }} ({{ user.email }})</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label for="enrollCourse" class="form-label">Course</label>
+                <select name="course_id" id="enrollCourse" class="form-select" required>
+                    <option value="">Select Course</option>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}">{{ course.title }} ({{ course.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100">Enroll</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Assign Courses to Instructor -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Assign Courses to Instructor</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3 align-items-end">
+            {% csrf_token %}
+            <input type="hidden" name="assign_instructor_courses" value="1">
+            <div class="col-md-5">
+                <label for="selectInstructor" class="form-label">Instructor</label>
+                <select name="instructor_id" id="selectInstructor" class="form-select" required onchange="updateInstructorCourses()">
+                    <option value="">Select Instructor</option>
+                    {% for user in users %}
+                        {% if user.role == 'instructor' %}
+                            <option value="{{ user.id }}">{{ user.get_full_name }} ({{ user.email }})</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label for="instructorCourses" class="form-label">Courses</label>
+                <select name="course_ids" id="instructorCourses" class="form-select" multiple size="5" required>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}">{{ course.title }} ({{ course.code }})</option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple courses</small>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Assign</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Preload instructor-course assignments for UI selection using valid JSON
+// window.instructorCourses will be set below from JSON
+// Django will output a JSON object mapping instructor IDs to arrays of course IDs
+window.instructorCourses = JSON.parse(document.getElementById('instructorCoursesData').textContent);
+
+function updateInstructorCourses() {
+    var instructorId = document.getElementById('selectInstructor').value;
+    var courseSelect = document.getElementById('instructorCourses');
+    for (var i = 0; i < courseSelect.options.length; i++) {
+        courseSelect.options[i].selected = false;
+    }
+    if (window.instructorCourses[instructorId]) {
+        window.instructorCourses[instructorId].forEach(function(cid) {
+            for (var i = 0; i < courseSelect.options.length; i++) {
+                if (courseSelect.options[i].value == String(cid)) {
+                    courseSelect.options[i].selected = true;
+                }
+            }
+        });
+    }
+}
+</script>
+
+
+<script id="instructorCoursesData" type="application/json">{{ instructor_courses_json|safe }}</script>
+
+<!-- Users Table -->
+<script>
+// Preload instructor-course assignments for UI selection using valid JSON
+window.instructorCourses = JSON.parse(document.getElementById('instructorCoursesData').textContent);
+function updateInstructorCourses() {
+    var instructorId = document.getElementById('selectInstructor').value;
+    var courseSelect = document.getElementById('instructorCourses');
+    for (var i = 0; i < courseSelect.options.length; i++) {
+        courseSelect.options[i].selected = false;
+    }
+    if (window.instructorCourses[instructorId]) {
+        window.instructorCourses[instructorId].forEach(function(cid) {
+            for (var i = 0; i < courseSelect.options.length; i++) {
+                if (courseSelect.options[i].value == String(cid)) {
+                    courseSelect.options[i].selected = true;
+                }
+            }
+        });
+    }
+}
+</script>
+<script id="instructorCoursesData" type="application/json">{{ instructor_courses_json|safe }}</script>
+                            {% if user.role == 'student' %}
+                                <span class="badge bg-primary">Student</span>
+                            {% elif user.role == 'instructor' %}
+                                <span class="badge bg-success">Instructor</span>
+                            {% elif user.role == 'admin' %}
+                                <span class="badge bg-warning">Admin</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.last_login %}
+                                <span class="text-muted" title="{{ user.last_login }}">
+                                    {{ user.last_login|timesince }} ago
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editUser('{{ user.id }}')" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-info" onclick="viewUser('{% templatetag openvariable %} user.id {% templatetag closevariable %}')" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if user.role == 'student' %}
+                                <button class="btn btn-outline-secondary" onclick="enrollUser('{% templatetag openvariable %} user.id {% templatetag closevariable %}')" title="Enroll in Courses">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </button>
+                                {% endif %}
+                                {% if user != request.user %}
+                                <button class="btn btn-outline-danger" onclick="confirmDelete('{% templatetag openvariable %} user.id {% templatetag closevariable %}', '{% templatetag openvariable %} user.get_full_name_with_initial|escapejs {% templatetag closevariable %}')" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="fas fa-users fa-3x mb-3"></i>
+                            <p>No users found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="firstName" class="form-label">First Name *</label>
+                            <input type="text" class="form-control" name="first_name" id="firstName" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="middleInitial" class="form-label">M.I.</label>
+                            <input type="text" class="form-control" name="middle_initial" id="middleInitial" maxlength="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="lastName" class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" name="last_name" id="lastName" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-8">
+                            <label for="email" class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" name="email" id="email" required>
+                            <small class="text-muted">This will be used as the login username</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="studentId" class="form-label">Student/Employee ID *</label>
+                            <input type="text" class="form-control" name="student_id" id="studentId" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="role" class="form-label">Role *</label>
+                            <select class="form-select" name="role" id="role" required>
+                                <option value="student">Student</option>
+                                <option value="instructor">Instructor</option>
+                                {% if user.role == 'admin' %}
+                                <option value="admin">Administrator</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Temporary Password</label>
+                            <input type="password" class="form-control" name="password" id="password" value="changeme123">
+                            <small class="text-muted">User should change this on first login</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" name="send_email" id="sendEmail">
+                        <label class="form-check-label" for="sendEmail">
+                            Send welcome email with login instructions
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Upload Users</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Upload a CSV file with user information. The file should include columns:</p>
+                <ul class="small">
+                    <li><strong>first_name</strong> - First name</li>
+                    <li><strong>last_name</strong> - Last name</li>
+                    <li><strong>email</strong> - Email address</li>
+                    <li><strong>student_id</strong> - Student/Employee ID</li>
+                    <li><strong>role</strong> - student, instructor, or admin</li>
+                </ul>
+                
+                <form enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="csvFile" class="form-label">CSV File</label>
+                        <input type="file" class="form-control" id="csvFile" accept=".csv" required>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="skipDuplicates" checked>
+                        <label class="form-check-label" for="skipDuplicates">
+                            Skip duplicate email addresses
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="processBulkUpload()">Upload Users</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,123,255,.075);
+}
+
+@media (max-width: 768px) {
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+    }
+}
+</style>
+
+<script>
+// ...existing code for search/filter...
+
+function editUser(userId) {
+    // Only use window.allUsers to populate modal fields and show modal
+    const user = window.allUsers.find(u => u.id == Number(userId));
+    if (!user) return;
+    document.getElementById('editUserId').value = user.id;
+    document.getElementById('editFirstName').value = user.first_name;
+    document.getElementById('editLastName').value = user.last_name;
+    document.getElementById('editEmail').value = user.email;
+    document.getElementById('editStudentId').value = user.student_id;
+    document.getElementById('editRole').value = user.role;
+    document.getElementById('editIsActive').checked = user.is_active;
+    var modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+    modal.show();
+}
+
+// ...existing code for other functions...
+</script>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="edit_user_id" id="editUserId">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">First Name *</label>
+                            <input type="text" class="form-control" name="edit_first_name" id="editFirstName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" name="edit_last_name" id="editLastName" required>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" name="edit_email" id="editEmail" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Student/Employee ID *</label>
+                            <input type="text" class="form-control" name="edit_student_id" id="editStudentId" required>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Role *</label>
+                            <select class="form-select" name="edit_role" id="editRole" required>
+                                <option value="student">Student</option>
+                                <option value="instructor">Instructor</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Active</label><br>
+                            <input type="checkbox" name="edit_is_active" id="editIsActive">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS (ensure this is loaded) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+<!-- User data as JSON and initialization (must come before main script) -->
+{{ user_json|json_script:"allUsersData" }}
+<script>
+window.allUsers = JSON.parse(document.getElementById('allUsersData').textContent);
+console.log('User management JS loaded, allUsers:', window.allUsers);
+if (!window.bootstrap) {
+    console.error('Bootstrap JS is not loaded!');
+}
+</script>
+{% endblock %}

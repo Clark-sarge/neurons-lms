@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Admin Dashboard</h2>
+    <div class="list-group mt-4 mb-4">
+        <a href="/users/" class="list-group-item list-group-item-action">
+            <i class="fas fa-users"></i> Manage Users
+        </a>
+        <a href="/courses/" class="list-group-item list-group-item-action">
+            <i class="fas fa-book"></i> Manage Courses
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header"><strong>Add New Course</strong></div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" name="title" class="form-control" placeholder="Course Title" required>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" name="code" class="form-control" placeholder="Course Code" required>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" name="instructor" class="form-control" placeholder="Instructor" required>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" name="semester" class="form-control" placeholder="Semester" required>
+                    </div>
+                    <div class="col-md-1">
+                        <input type="number" name="year" class="form-control" placeholder="Year" required>
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <textarea name="description" class="form-control" placeholder="Description (optional)"></textarea>
+                    </div>
+                    <div class="col-md-2 mt-2">
+                        <button type="submit" class="btn btn-success w-100">Add Course</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><strong>All Courses</strong></div>
+        <div class="card-body p-0">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Code</th>
+                        <th>Instructor</th>
+                        <th>Semester</th>
+                        <th>Year</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr>
+                        <td>{{ course.title }}</td>
+                        <td>{{ course.code }}</td>
+                        <td>{{ course.instructor }}</td>
+                        <td>{{ course.semester }}</td>
+                        <td>{{ course.year }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center">No courses found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

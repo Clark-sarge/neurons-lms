@@ -1,0 +1,401 @@
+<!-- templates/enroll_students.html -->
+{% extends 'base.html' %}
+
+{% block title %}Enroll Students - {{ course.code }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'course_list' %}">Courses</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'course_detail' course.id %}">{{ course.code }}</a></li>
+        <li class="breadcrumb-item active">Enrollment</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-plus"></i> 
+                    Enroll Students in {{ course.code }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Select students to enroll in <strong>{{ course.title }}</strong>.</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Search and Filter -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" id="searchStudents" placeholder="Search students by name or ID...">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                <label class="form-check-label" for="selectAll">
+                                    Select All
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if available_students %}
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th width="50">Select</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Student ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in available_students %}
+                                <tr class="student-row" data-search="{{ student.first_name|lower }} {{ student.last_name|lower }} {{ student.email|lower }} {{ student.student_id|lower }}">
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input student-checkbox" type="checkbox" name="students" value="{{ student.id }}" id="student_{{ student.id }}">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <label class="form-check-label" for="student_{{ student.id }}">
+                                            {{ student.get_full_name_with_initial }}
+                                        </label>
+                                    </td>
+                                    <td>{{ student.email }}</td>
+                                    <td><code>{{ student.student_id }}</code></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">
+                            <span id="selectedCount">0</span> student(s) selected
+                        </small>
+                        <div>
+                            <a href="{% url 'course_detail' course.id %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i> Enroll Selected Students
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Available Students</h5>
+                        <p class="text-muted">All students are already enrolled in this course, or no students exist in the system.</p>
+                        <a href="{% url 'user_management' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-plus"></i> Add New Students
+                        </a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Course Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Course Information</h6>
+            </div>
+            <div class="card-body">
+                <h5>{{ course.title }}</h5>
+                <p class="text-muted mb-2">{{ course.description|truncatewords:20 }}</p>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="h4 mb-0 text-primary">{{ enrolled_students.count }}</div>
+                        <small class="text-muted">Enrolled</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 mb-0 text-info">{{ available_students.count }}</div>
+                        <small class="text-muted">Available</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Currently Enrolled Students -->
+        {% if enrolled_students %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-users"></i> 
+                    Currently Enrolled ({{ enrolled_students.count }})
+                </h6>
+            </div>
+            <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for student in enrolled_students %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">{{ student.get_full_name_with_initial }}</div>
+                            <small class="text-muted">{{ student.student_id }}</small>
+                        </div>
+            <button class="btn btn-sm btn-outline-danger" 
+                onclick="unenrollStudent('{{ student.id|escapejs }}', '{{ student.get_full_name_with_initial|escapejs }}')"
+                title="Remove from course">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchStudents');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    
+    // Search functionality
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('.student-row');
+        
+        rows.forEach(row => {
+            const searchData = row.getAttribute('data-search');
+            if (searchData.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+                // Uncheck hidden rows
+                const checkbox = row.querySelector('.student-checkbox');
+                if (checkbox.checked) {
+                    checkbox.checked = false;
+                    updateSelectedCount();
+                }
+            }
+        });
+    });
+    
+    // Select all functionality
+    selectAllCheckbox.addEventListener('change', function(e) {
+        const visibleCheckboxes = Array.from(studentCheckboxes).filter(cb => 
+            cb.closest('.student-row').style.display !== 'none'
+        );
+        
+        visibleCheckboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+        
+        updateSelectedCount();
+    });
+    
+    // Individual checkbox change
+    studentCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedCount();
+            
+            // Update select all checkbox state
+            const visibleCheckboxes = Array.from(studentCheckboxes).filter(cb => 
+                cb.closest('.student-row').style.display !== 'none'
+            );
+            const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+            
+            if (checkedVisible.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedVisible.length === visibleCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        });
+    });
+    
+    function updateSelectedCount() {
+        const checkedCount = Array.from(studentCheckboxes).filter(cb => cb.checked).length;
+        selectedCountSpan.textContent = checkedCount;
+    }
+});
+
+function unenrollStudent(studentId, studentName) {
+    if (confirm(`Remove ${studentName} from this course?`)) {
+        // Create a form to submit the unenrollment
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.location.href;
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'unenroll';
+        
+        const studentInput = document.createElement('input');
+        studentInput.type = 'hidden';
+        studentInput.name = 'student_id';
+        studentInput.value = studentId;
+        
+        form.appendChild(csrfInput);
+        form.appendChild(actionInput);
+        form.appendChild(studentInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
+<style>
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+.student-row:hover {
+    background-color: rgba(0,123,255,.075);
+}
+
+.form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}from lms_app.models import User, Course
+from datetime import date
+
+# Create instructor
+instructor = User.objects.create_user(
+    username='instructor1',
+    email='instructor1@college.edu',
+    password='password123',
+    first_name='Alice',
+    last_name='Instructor',
+    role='instructor',
+    student_id='INST001'
+)
+
+# Create students
+student1 = User.objects.create_user(
+    username='student1',
+    email='student1@student.edu',
+    password='password123',
+    first_name='Bob',
+    last_name='Student',
+    role='student',
+    student_id='STU001'
+)
+
+student2 = User.objects.create_user(
+    username='student2',
+    email='student2@student.edu',
+    password='password123',
+    first_name='Carol',
+    last_name='Student',
+    role='student',
+    student_id='STU002'
+)
+
+# Create courses
+course1 = Course.objects.create(
+    title='Intro to Programming',
+    code='CS101',
+    description='Learn programming basics.',
+    instructor='Alice Instructor',
+    semester='Fall',
+    year=2025,
+    start_date=date(2025, 9, 1),
+    end_date=date(2025, 12, 15)
+)
+
+course2 = Course.objects.create(
+    title='Data Structures',
+    code='CS102',
+    description='Learn about data structures.',
+    instructor='Alice Instructor',
+    semester='Fall',
+    year=2025,
+    start_date=date(2025, 9, 1),
+    end_date=date(2025, 12, 15)
+)from lms_app.models import User, Course
+from datetime import date
+
+# Create instructor
+instructor = User.objects.create_user(
+    username='instructor1',
+    email='instructor1@college.edu',
+    password='password123',
+    first_name='Alice',
+    last_name='Instructor',
+    role='instructor',
+    student_id='INST001'
+)
+
+# Create students
+student1 = User.objects.create_user(
+    username='student1',
+    email='student1@student.edu',
+    password='password123',
+    first_name='Bob',
+    last_name='Student',
+    role='student',
+    student_id='STU001'
+)
+
+student2 = User.objects.create_user(
+    username='student2',
+    email='student2@student.edu',
+    password='password123',
+    first_name='Carol',
+    last_name='Student',
+    role='student',
+    student_id='STU002'
+)
+
+# Create courses
+course1 = Course.objects.create(
+    title='Intro to Programming',
+    code='CS101',
+    description='Learn programming basics.',
+    instructor='Alice Instructor',
+    semester='Fall',
+    year=2025,
+    start_date=date(2025, 9, 1),
+    end_date=date(2025, 12, 15)
+)
+
+course2 = Course.objects.create(
+    title='Data Structures',
+    code='CS102',
+    description='Learn about data structures.',
+    instructor='Alice Instructor',
+    semester='Fall',
+    year=2025,
+    start_date=date(2025, 9, 1),
+    end_date=date(2025, 12, 15)
+)
