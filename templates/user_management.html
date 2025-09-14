@@ -1,7 +1,7 @@
 <!-- templates/user_management.html -->
 {% extends 'base.html' %}
 
-{% block title %}User Management - Neurons{% endblock %}
+{% block title %}User Management - Custom LMS{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -35,126 +35,50 @@
     </div>
 </div>
 
-<!-- Enroll Student in Course -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Enroll Student in Course</h5>
-    </div>
-    <div class="card-body">
-        <form method="post" class="row g-3 align-items-end">
-            {% csrf_token %}
-            <div class="col-md-5">
-                <label for="enrollStudent" class="form-label">Student</label>
-                <select name="student_id" id="enrollStudent" class="form-select" required>
-                    <option value="">Select Student</option>
-                    {% for user in users %}
-                        {% if user.role == 'student' %}
-                            <option value="{{ user.id }}">{{ user.get_full_name }} ({{ user.email }})</option>
-                        {% endif %}
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-5">
-                <label for="enrollCourse" class="form-label">Course</label>
-                <select name="course_id" id="enrollCourse" class="form-select" required>
-                    <option value="">Select Course</option>
-                    {% for course in courses %}
-                        <option value="{{ course.id }}">{{ course.title }} ({{ course.code }})</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-success w-100">Enroll</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Assign Courses to Instructor -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Assign Courses to Instructor</h5>
-    </div>
-    <div class="card-body">
-        <form method="post" class="row g-3 align-items-end">
-            {% csrf_token %}
-            <input type="hidden" name="assign_instructor_courses" value="1">
-            <div class="col-md-5">
-                <label for="selectInstructor" class="form-label">Instructor</label>
-                <select name="instructor_id" id="selectInstructor" class="form-select" required onchange="updateInstructorCourses()">
-                    <option value="">Select Instructor</option>
-                    {% for user in users %}
-                        {% if user.role == 'instructor' %}
-                            <option value="{{ user.id }}">{{ user.get_full_name }} ({{ user.email }})</option>
-                        {% endif %}
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-5">
-                <label for="instructorCourses" class="form-label">Courses</label>
-                <select name="course_ids" id="instructorCourses" class="form-select" multiple size="5" required>
-                    {% for course in courses %}
-                        <option value="{{ course.id }}">{{ course.title }} ({{ course.code }})</option>
-                    {% endfor %}
-                </select>
-                <small class="text-muted">Hold Ctrl (Cmd on Mac) to select multiple courses</small>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Assign</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-// Preload instructor-course assignments for UI selection using valid JSON
-// window.instructorCourses will be set below from JSON
-// Django will output a JSON object mapping instructor IDs to arrays of course IDs
-window.instructorCourses = JSON.parse(document.getElementById('instructorCoursesData').textContent);
-
-function updateInstructorCourses() {
-    var instructorId = document.getElementById('selectInstructor').value;
-    var courseSelect = document.getElementById('instructorCourses');
-    for (var i = 0; i < courseSelect.options.length; i++) {
-        courseSelect.options[i].selected = false;
-    }
-    if (window.instructorCourses[instructorId]) {
-        window.instructorCourses[instructorId].forEach(function(cid) {
-            for (var i = 0; i < courseSelect.options.length; i++) {
-                if (courseSelect.options[i].value == String(cid)) {
-                    courseSelect.options[i].selected = true;
-                }
-            }
-        });
-    }
-}
-</script>
-
-
-<script id="instructorCoursesData" type="application/json">{{ instructor_courses_json|safe }}</script>
-
 <!-- Users Table -->
-<script>
-// Preload instructor-course assignments for UI selection using valid JSON
-window.instructorCourses = JSON.parse(document.getElementById('instructorCoursesData').textContent);
-function updateInstructorCourses() {
-    var instructorId = document.getElementById('selectInstructor').value;
-    var courseSelect = document.getElementById('instructorCourses');
-    for (var i = 0; i < courseSelect.options.length; i++) {
-        courseSelect.options[i].selected = false;
-    }
-    if (window.instructorCourses[instructorId]) {
-        window.instructorCourses[instructorId].forEach(function(cid) {
-            for (var i = 0; i < courseSelect.options.length; i++) {
-                if (courseSelect.options[i].value == String(cid)) {
-                    courseSelect.options[i].selected = true;
-                }
-            }
-        });
-    }
-}
-</script>
-<script id="instructorCoursesData" type="application/json">{{ instructor_courses_json|safe }}</script>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">All Users ({{ users.count }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="usersTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Student ID</th>
+                        <th>Role</th>
+                        <th>Last Login</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr data-role="{{ user.role }}" data-search="{{ user.first_name|lower }} {{ user.last_name|lower }} {{ user.email|lower }} {{ user.student_id|lower }}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2">
+                                    {{ user.first_name.0 }}{{ user.last_name.0 }}
+                                </div>
+                                <div>
+                                    <strong>{{ user.get_full_name_with_initial }}</strong>
+                                    {% if user.is_superuser %}
+                                        <span class="badge bg-danger ms-1">Super Admin</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="mailto:{{ user.email }}" class="text-decoration-none">
+                                {{ user.email }}
+                            </a>
+                        </td>
+                        <td>
+                            <code>{{ user.student_id }}</code>
+                        </td>
+                        <td>
                             {% if user.role == 'student' %}
                                 <span class="badge bg-primary">Student</span>
                             {% elif user.role == 'instructor' %}
@@ -184,16 +108,16 @@ function updateInstructorCourses() {
                                 <button class="btn btn-outline-primary" onclick="editUser('{{ user.id }}')" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-outline-info" onclick="viewUser('{% templatetag openvariable %} user.id {% templatetag closevariable %}')" title="View Details">
+                                <button class="btn btn-outline-info" onclick="viewUser('{{ user.id }}')" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 {% if user.role == 'student' %}
-                                <button class="btn btn-outline-secondary" onclick="enrollUser('{% templatetag openvariable %} user.id {% templatetag closevariable %}')" title="Enroll in Courses">
+                                <button class="btn btn-outline-secondary" onclick="enrollUser('{{ user.id }}')" title="Enroll in Courses">
                                     <i class="fas fa-graduation-cap"></i>
                                 </button>
                                 {% endif %}
                                 {% if user != request.user %}
-                                <button class="btn btn-outline-danger" onclick="confirmDelete('{% templatetag openvariable %} user.id {% templatetag closevariable %}', '{% templatetag openvariable %} user.get_full_name_with_initial|escapejs {% templatetag closevariable %}')" title="Delete">
+                                <button class="btn btn-outline-danger" onclick="confirmDelete('{{ user.id }}', '{{ user.get_full_name_with_initial|escapejs }}')" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                                 {% endif %}
@@ -353,92 +277,104 @@ function updateInstructorCourses() {
 </style>
 
 <script>
-// ...existing code for search/filter...
+// Search functionality
+document.getElementById('searchUsers').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    filterTable();
+});
 
-function editUser(userId) {
-    // Only use window.allUsers to populate modal fields and show modal
-    const user = window.allUsers.find(u => u.id == Number(userId));
-    if (!user) return;
-    document.getElementById('editUserId').value = user.id;
-    document.getElementById('editFirstName').value = user.first_name;
-    document.getElementById('editLastName').value = user.last_name;
-    document.getElementById('editEmail').value = user.email;
-    document.getElementById('editStudentId').value = user.student_id;
-    document.getElementById('editRole').value = user.role;
-    document.getElementById('editIsActive').checked = user.is_active;
-    var modal = new bootstrap.Modal(document.getElementById('editUserModal'));
-    modal.show();
+// Role filter functionality
+document.getElementById('filterRole').addEventListener('change', function(e) {
+    filterTable();
+});
+
+function filterTable() {
+    const searchTerm = document.getElementById('searchUsers').value.toLowerCase();
+    const roleFilter = document.getElementById('filterRole').value;
+    const rows = document.querySelectorAll('#usersTable tbody tr[data-role]');
+    
+    rows.forEach(row => {
+        const searchData = row.getAttribute('data-search');
+        const roleData = row.getAttribute('data-role');
+        
+        const matchesSearch = !searchTerm || searchData.includes(searchTerm);
+        const matchesRole = !roleFilter || roleData === roleFilter;
+        
+        if (matchesSearch && matchesRole) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 
-// ...existing code for other functions...
-</script>
+function clearFilters() {
+    document.getElementById('searchUsers').value = '';
+    document.getElementById('filterRole').value = '';
+    filterTable();
+}
 
-<!-- Edit User Modal -->
-<div class="modal fade" id="editUserModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="post">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    {% csrf_token %}
-                    <input type="hidden" name="edit_user_id" id="editUserId">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label class="form-label">First Name *</label>
-                            <input type="text" class="form-control" name="edit_first_name" id="editFirstName" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Last Name *</label>
-                            <input type="text" class="form-control" name="edit_last_name" id="editLastName" required>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-8">
-                            <label class="form-label">Email Address *</label>
-                            <input type="email" class="form-control" name="edit_email" id="editEmail" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Student/Employee ID *</label>
-                            <input type="text" class="form-control" name="edit_student_id" id="editStudentId" required>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Role *</label>
-                            <select class="form-select" name="edit_role" id="editRole" required>
-                                <option value="student">Student</option>
-                                <option value="instructor">Instructor</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Active</label><br>
-                            <input type="checkbox" name="edit_is_active" id="editIsActive">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+function editUser(userId) {
+    // TODO: Implement edit user functionality
+    console.log('Edit user:', userId);
+    alert('Edit user functionality would be implemented here');
+}
 
-<!-- Bootstrap JS (ensure this is loaded) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+function viewUser(userId) {
+    // TODO: Implement view user details
+    console.log('View user:', userId);
+    alert('View user details functionality would be implemented here');
+}
 
-<!-- User data as JSON and initialization (must come before main script) -->
-{{ user_json|json_script:"allUsersData" }}
-<script>
-window.allUsers = JSON.parse(document.getElementById('allUsersData').textContent);
-console.log('User management JS loaded, allUsers:', window.allUsers);
-if (!window.bootstrap) {
-    console.error('Bootstrap JS is not loaded!');
+function enrollUser(userId) {
+    // TODO: Implement course enrollment
+    console.log('Enroll user:', userId);
+    alert('Course enrollment functionality would be implemented here');
+}
+
+function confirmDelete(userId, userName) {
+    if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+        // TODO: Implement delete user functionality
+        console.log('Delete user:', userId);
+        alert('Delete user functionality would be implemented here');
+    }
+}
+
+function processBulkUpload() {
+    const fileInput = document.getElementById('csvFile');
+    if (!fileInput.files[0]) {
+        alert('Please select a CSV file');
+        return;
+    }
+    
+    // TODO: Implement bulk upload functionality
+    alert('Bulk upload functionality would be implemented here');
+}
+
+// Generate random student ID for new users
+document.getElementById('role').addEventListener('change', function(e) {
+    if (e.target.value === 'student' && !document.getElementById('studentId').value) {
+        const randomId = 'STU' + String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+        document.getElementById('studentId').value = randomId;
+    } else if (e.target.value === 'instructor' && !document.getElementById('studentId').value) {
+        const randomId = 'INST' + String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+        document.getElementById('studentId').value = randomId;
+    }
+});
+
+// Auto-generate email suggestions
+document.getElementById('firstName').addEventListener('input', updateEmailSuggestion);
+document.getElementById('lastName').addEventListener('input', updateEmailSuggestion);
+
+function updateEmailSuggestion() {
+    const firstName = document.getElementById('firstName').value.toLowerCase();
+    const lastName = document.getElementById('lastName').value.toLowerCase();
+    const emailField = document.getElementById('email');
+    
+    if (firstName && lastName && !emailField.value) {
+        const domain = document.getElementById('role').value === 'student' ? 'student.edu' : 'college.edu';
+        emailField.placeholder = `${firstName}.${lastName}@${domain}`;
+    }
 }
 </script>
 {% endblock %}
