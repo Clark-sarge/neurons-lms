@@ -8,11 +8,16 @@
                 <h3>Login</h3>
             </div>
             <div class="card-body">
+                {% if form and form.errors %}
+                <div class="alert alert-danger" role="alert">
+                    Wrong username or password.
+                </div>
+                {% endif %}
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label for="username" class="form-label">Email</label>
-                        <input type="email" class="form-control" name="username" required>
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" required>
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
